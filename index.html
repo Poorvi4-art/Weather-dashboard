@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather Dashboard</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/lucide@0.264.0/dist/lucide.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+
+<header>
+  <h1>🌦️ Weather Dashboard</h1>
+  <div class="search-controls">
+    <div class="search-box">
+      <input type="text" id="city-input" placeholder="Enter city name..." />
+      <button id="search-button">Search</button>
+    </div>
+    <button id="current-location-button">📍 My Location</button>
+  </div>
+  <p id="error-message" class="error" role="alert" aria-live="assertive"></p>
+  <div class="controls">
+    <button id="unit-toggle">Switch to °F</button>
+    <button id="theme-toggle">🌙 Dark Mode</button>
+  </div>
+</header>
+
+<main>
+  <section id="location-home">
+    <h2>Recent Searches</h2>
+    <div id="history-container" class="history-container">
+      <p class="placeholder-text">Search a city to start your history!</p>
+    </div>
+  </section>
+
+  <div id="results-page" class="hidden">
+    <div class="results-grid">
+      <div id="weather-details-main">
+        <section id="current-weather">
+          <h2>Weather Snapshot</h2>
+          <div id="weather-info" class="card main-weather-card">
+            <div class="placeholder-text">Loading weather details...</div>
+          </div>
+        </section>
+      </div>
+
+      <section id="forecast" class="forecast-sidebar">
+        <h2>5-Day Forecast</h2>
+        <div id="forecast-info" class="forecast-container"></div>
+      </section>
+    </div>
+
+    <section id="hourly-forecast-section">
+      <h2>Today's Timeline</h2>
+      <div class="hourly-forecast" id="hourly-info"></div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <p>Built with ❤️ using HTML, CSS, JS & OpenWeather API</p>
+</footer>
+<script src="scripts.js"></script>
+</div>
+</body>
+</html>
