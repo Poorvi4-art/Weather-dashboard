@@ -58,7 +58,6 @@ function getUnitSymbol() { return currentUnit === "metric" ? "°C" : "°F"; }
 function getWindUnit() { return currentUnit === "metric" ? "m/s" : "mph"; }
 function mapLucideIcon(condition) { return APP_CONFIG.getWeatherData(condition).icon; }
 function getMoodMessage(condition) {
-    // Uses the condition to return a concise, hour-specific message
     const data = APP_CONFIG.getWeatherData(condition);
     if (data.main === "Rain") return "☔ Stay dry!";
     if (data.main === "Snow") return "❄ Enjoy the snow!";
@@ -117,27 +116,34 @@ function getCurrentLocationWeather() {
     }
 }
 
-// **MODIFIED:** Now calls the Netlify 'forecast' function for a secure location lookup.
+// **MODIFIED:** Routes through the secure Netlify 'forecast' function.
 async function getWeatherByCoords(lat, lon) {
     weatherInfo.innerHTML = '<div class="loading-state">⏳ Loading weather data...</div>';
     showPage('results');
     try {
-        // Route through the secure Netlify 'forecast' function using the 'weather' endpoint
+        // Call the secure 'forecast' function to get current data based on coords
         const res = await fetch(`/.netlify/functions/forecast?endpoint=weather&lat=${lat}&lon=${lon}&units=${currentUnit}`);
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || "Could not fetch weather data for current location.");
+        }
         
-        if (!res.ok) throw new Error("Could not fetch weather data for current location.");
         const data = await res.json();
         
         // Use the city name from the successful response to call the full getWeather flow
         cityInput.value = data.name;
         getWeather(data.name);
+
     } catch (err) {
         errorMessage.textContent = err.message;
         showPage('home');
     }
 }
 
-// --- MAIN FETCH LOGIC (Corrected Error Handling) ---
+
+// --- MAIN FETCH LOGIC ---
+// **MODIFIED:** Calls two Netlify functions and includes robust error checking.
 async function getWeather(city) {
     weatherInfo.innerHTML = '<div class="loading-state">⏳ Fetching weather details...</div>';
     forecastInfo.innerHTML = "";
@@ -148,28 +154,24 @@ async function getWeather(city) {
     try {
         lastCity = city;
 
-        // Fetch current weather (uses 'weather' function) and forecast (uses 'forecast' function)
+        // Fetch current weather and forecast concurrently using Promise.all
         const [currentRes, forecastRes] = await Promise.all([
-            // 1. Current Weather
+            // 1. Current Weather (Calls the existing 'weather' function)
             fetch(`/.netlify/functions/weather?q=${encodeURIComponent(city)}&units=${currentUnit}`),
             
-            // 2. Forecast
+            // 2. Forecast (Calls the NEW 'forecast' function)
             fetch(`/.netlify/functions/forecast?endpoint=forecast&q=${encodeURIComponent(city)}&units=${currentUnit}`)
         ]);
 
-        // CRITICAL CHECK 1: If current weather fetch failed (e.g., city not found or API key error)
+        // CRITICAL CHECK 1: Check if current weather fetch failed
         if (!currentRes.ok) {
-            // Read the error message from the response body if available
             const errorData = await currentRes.json();
-            // Throw a specific error based on the response
             throw new Error(errorData.error || `City "${city}" not found (Error Code: ${currentRes.status})`);
         }
         
-        // CRITICAL CHECK 2: If forecast fetch failed (e.g., internal error like missing API key)
+        // CRITICAL CHECK 2: Check if forecast fetch failed
         if (!forecastRes.ok) {
-            // Read the error message from the response body if available
             const errorData = await forecastRes.json();
-            // Throw a specific error based on the response
             throw new Error(errorData.error || `Forecast data unavailable for "${city}" (Error Code: ${forecastRes.status})`);
         }
 
@@ -177,7 +179,6 @@ async function getWeather(city) {
         const data = await currentRes.json();
         const forecastData = await forecastRes.json();
 
-        // This line is now safe because we checked if the response was OK
         saveToHistory(data.name);
         displayWeather(data);
         displayForecast(forecastData.list);
@@ -189,11 +190,11 @@ async function getWeather(city) {
         }
 
     } catch (err) {
-        // Display the error message thrown above
         errorMessage.textContent = err.message;
         showPage('home');
     }
 }
+
 
 // --- DISPLAY FUNCTIONS ---
 
@@ -201,7 +202,6 @@ function displayWeather(data) {
     const unitSymbol = getUnitSymbol();
     const windUnit = getWindUnit();
     const condition = data.weather[0].main;
-    // Get all relevant data from the CONFIG object
     const weatherDetails = APP_CONFIG.getWeatherData(condition);
 
     weatherInfo.innerHTML = `
@@ -289,7 +289,7 @@ themeToggle.addEventListener("click", () => {
 
 
 document.addEventListener('DOMContentLoaded', () => {
- showPage('home');
+    showPage('home');
     // Set initial state for Dark Mode toggle
     if (document.body.classList.contains("dark-mode")) {
         themeToggle.textContent = "☀️ Light Mode";
