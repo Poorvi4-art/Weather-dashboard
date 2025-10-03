@@ -1,4 +1,11 @@
 // const API_KEY = 'Your_API_Key_Here'; // Your OpenWeatherMap API key
+async function getWeather() {
+  const city = document.getElementById("city").value;
+  const response = await fetch(`/.netlify/functions/weather?q=${encodeURIComponent(city)}`);
+  const data = await response.json();
+  document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+}
+
 
 // --- CONFIGURATION AND DATA OBJECTS ---
 const APP_CONFIG = {
