@@ -137,9 +137,7 @@ async function getWeatherByCoords(lat, lon) {
     }
 }
 
-
-// --- MAIN FETCH LOGIC ---
-// **MODIFIED:** Now calls the two Netlify functions for current weather and forecast.
+// --- MAIN FETCH LOGIC (Corrected Error Handling) ---
 async function getWeather(city) {
     weatherInfo.innerHTML = '<div class="loading-state">⏳ Fetching weather details...</div>';
     forecastInfo.innerHTML = "";
@@ -150,24 +148,40 @@ async function getWeather(city) {
     try {
         lastCity = city;
 
-        // Fetch current weather and forecast concurrently using Promise.all
+        // Fetch current weather (uses 'weather' function) and forecast (uses 'forecast' function)
         const [currentRes, forecastRes] = await Promise.all([
-            // 1. Current Weather (Calls the existing 'weather' function)
+            // 1. Current Weather
             fetch(`/.netlify/functions/weather?q=${encodeURIComponent(city)}&units=${currentUnit}`),
             
-            // 2. Forecast (Calls the NEW 'forecast' function)
+            // 2. Forecast
             fetch(`/.netlify/functions/forecast?endpoint=forecast&q=${encodeURIComponent(city)}&units=${currentUnit}`)
         ]);
 
-        if (!currentRes.ok) throw new Error(`City "${city}" not found`);
+        // CRITICAL CHECK 1: If current weather fetch failed (e.g., city not found or API key error)
+        if (!currentRes.ok) {
+            // Read the error message from the response body if available
+            const errorData = await currentRes.json();
+            // Throw a specific error based on the response
+            throw new Error(errorData.error || `City "${city}" not found (Error Code: ${currentRes.status})`);
+        }
+        
+        // CRITICAL CHECK 2: If forecast fetch failed (e.g., internal error like missing API key)
+        if (!forecastRes.ok) {
+            // Read the error message from the response body if available
+            const errorData = await forecastRes.json();
+            // Throw a specific error based on the response
+            throw new Error(errorData.error || `Forecast data unavailable for "${city}" (Error Code: ${forecastRes.status})`);
+        }
+
+        // Only proceed if BOTH responses are okay
         const data = await currentRes.json();
         const forecastData = await forecastRes.json();
 
+        // This line is now safe because we checked if the response was OK
         saveToHistory(data.name);
         displayWeather(data);
         displayForecast(forecastData.list);
         displayHourly(forecastData.list);
-        // REMOVED: setTheme(data.weather[0].main);
 
         // RENDER ICONS AFTER DOM UPDATE
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
@@ -175,11 +189,11 @@ async function getWeather(city) {
         }
 
     } catch (err) {
+        // Display the error message thrown above
         errorMessage.textContent = err.message;
         showPage('home');
     }
 }
-
 
 // --- DISPLAY FUNCTIONS ---
 
