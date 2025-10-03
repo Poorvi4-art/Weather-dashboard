@@ -1,6 +1,6 @@
 export async function handler(event, context) {
   const city = event.queryStringParameters.q || "London";
-  const apiKey = process.env.OPENWEATHER_KEY; // key stored securely in Netlify
+  const apiKey = process.env.OPENWEATHER_KEY; // <--- must match exactly
 
   const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}`;
   const res = await fetch(url);
@@ -11,3 +11,4 @@ export async function handler(event, context) {
     body: JSON.stringify(data)
   };
 }
+
