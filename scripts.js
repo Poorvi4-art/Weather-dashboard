@@ -1,12 +1,3 @@
-// const API_KEY = 'Your_API_Key_Here'; // Your OpenWeatherMap API key
-async function getWeather() {
-  const city = document.getElementById("city").value;
-  const response = await fetch(`/.netlify/functions/weather?q=${encodeURIComponent(city)}`);
-  const data = await response.json();
-  document.getElementById("output").textContent = JSON.stringify(data, null, 2);
-}
-
-
 // --- CONFIGURATION AND DATA OBJECTS ---
 const APP_CONFIG = {
     MAX_HISTORY: 5,
@@ -126,14 +117,18 @@ function getCurrentLocationWeather() {
     }
 }
 
+// **MODIFIED:** Now calls the Netlify 'forecast' function for a secure location lookup.
 async function getWeatherByCoords(lat, lon) {
     weatherInfo.innerHTML = '<div class="loading-state">⏳ Loading weather data...</div>';
     showPage('results');
     try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=${currentUnit}`;
-        const res = await fetch(url);
+        // Route through the secure Netlify 'forecast' function using the 'weather' endpoint
+        const res = await fetch(`/.netlify/functions/forecast?endpoint=weather&lat=${lat}&lon=${lon}&units=${currentUnit}`);
+        
         if (!res.ok) throw new Error("Could not fetch weather data for current location.");
         const data = await res.json();
+        
+        // Use the city name from the successful response to call the full getWeather flow
         cityInput.value = data.name;
         getWeather(data.name);
     } catch (err) {
@@ -144,6 +139,7 @@ async function getWeatherByCoords(lat, lon) {
 
 
 // --- MAIN FETCH LOGIC ---
+// **MODIFIED:** Now calls the two Netlify functions for current weather and forecast.
 async function getWeather(city) {
     weatherInfo.innerHTML = '<div class="loading-state">⏳ Fetching weather details...</div>';
     forecastInfo.innerHTML = "";
@@ -156,8 +152,11 @@ async function getWeather(city) {
 
         // Fetch current weather and forecast concurrently using Promise.all
         const [currentRes, forecastRes] = await Promise.all([
-            fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=${currentUnit}`),
-            fetch(`https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=${currentUnit}`)
+            // 1. Current Weather (Calls the existing 'weather' function)
+            fetch(`/.netlify/functions/weather?q=${encodeURIComponent(city)}&units=${currentUnit}`),
+            
+            // 2. Forecast (Calls the NEW 'forecast' function)
+            fetch(`/.netlify/functions/forecast?endpoint=forecast&q=${encodeURIComponent(city)}&units=${currentUnit}`)
         ]);
 
         if (!currentRes.ok) throw new Error(`City "${city}" not found`);
@@ -276,7 +275,7 @@ themeToggle.addEventListener("click", () => {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    showPage('home');
+ showPage('home');
     // Set initial state for Dark Mode toggle
     if (document.body.classList.contains("dark-mode")) {
         themeToggle.textContent = "☀️ Light Mode";
